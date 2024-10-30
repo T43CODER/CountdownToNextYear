@@ -1,7 +1,10 @@
+import "./styles/styles.css";
+
 function App() {
   return (
     <div className="App">
-      <h1>Countdown</h1>
+      <div></div>
+      <span id="progressbar">Countdown</span>
     </div>
   );
 }
