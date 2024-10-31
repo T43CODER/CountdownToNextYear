@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./styles/styles.css";
 
-type TimeLeftType = {
+type TimeElapsedType = {
   months: number;
   days: number;
   hours: number;
@@ -10,61 +10,87 @@ type TimeLeftType = {
   diffInMsPercent: number;
 };
 
+type TimeElapsedPercentageType = {
+  monthsPercent: number;
+  daysPercent: number;
+  hoursPercent: number;
+  minutesPercent: number;
+  secondsPercent: number;
+};
+
 function App() {
-  const [timeLeft, setTimeLeft] = useState<TimeLeftType>({
-    months: 0,
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    diffInMsPercent: 0,
-  });
+  function dateDifference(): TimeElapsedType {
+    const year: number = new Date().getFullYear();
+    const startOfYear: Date = new Date(year, 0, 1);
+    const startDate: Date = startOfYear;
+    const endDate: Date = new Date();
 
-  useEffect(() => {
-    function dateDifference(): TimeLeftType {
-      const year: number = new Date().getFullYear();
-      const startOfYear: Date = new Date(year, 0, 1); // January 1 of the current year
-      const firstDayOfNextYear: Date = new Date(year + 1, 0, 1); // January 1 of the next year
-      const startDate: Date = new Date();
-      const endDate: Date = firstDayOfNextYear;
+    let diffInMs: number = endDate.getTime() - startDate.getTime();
 
-      // Get the total difference in milliseconds for remaining time in the year
-      let diffInMs = endDate.getTime() - startDate.getTime();
+    const totalDaysInYear =
+      year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 366 : 365;
+    const totalMsInYear = totalDaysInYear * 24 * 60 * 60 * 1000;
 
-      // Calculate total milliseconds in the current year (2024 has 366 days)
-      const totalMsInYear = 366 * 24 * 60 * 60 * 1000;
+    const diffInMsPercent = (diffInMs / totalMsInYear) * 100;
 
-      // Calculate milliseconds completed in the year so far
-      const elapsedMs = startDate.getTime() - startOfYear.getTime();
+    let months =
+      (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+      (endDate.getMonth() - startDate.getMonth());
 
-      // Calculate percentage of year completed
-      const diffInMsPercent = (elapsedMs / totalMsInYear) * 100;
-
-      // Calculate months
-      let months =
-        (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-        (endDate.getMonth() - startDate.getMonth());
-
-      // Subtract the full months in milliseconds
-      let tempDate = new Date(startDate);
-      tempDate.setMonth(tempDate.getMonth() + months);
-      if (tempDate > endDate) {
-        months--;
-        tempDate.setMonth(tempDate.getMonth() - 1);
-      }
-
-      // Calculate the difference after months
-      diffInMs = endDate.getTime() - tempDate.getTime();
-
-      // Convert milliseconds to days, hours, minutes, and seconds
-      const seconds = Math.floor((diffInMs / 1000) % 60);
-      const minutes = Math.floor((diffInMs / (1000 * 60)) % 60);
-      const hours = Math.floor((diffInMs / (1000 * 60 * 60)) % 24);
-      const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-      return { months, days, hours, minutes, seconds, diffInMsPercent };
+    let tempDate = new Date(startDate);
+    tempDate.setMonth(tempDate.getMonth() + months);
+    if (tempDate > endDate) {
+      months--;
+      tempDate.setMonth(tempDate.getMonth() - 1);
     }
 
+    diffInMs = endDate.getTime() - tempDate.getTime();
+
+    const seconds = Math.floor((diffInMs / 1000) % 60);
+    const minutes = Math.floor((diffInMs / (1000 * 60)) % 60);
+    const hours = Math.floor((diffInMs / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    return { months, days, hours, minutes, seconds, diffInMsPercent };
+  }
+
+  function calculateElapsedPercentages(
+    elapsedTime: TimeElapsedType
+  ): TimeElapsedPercentageType {
+    const now = new Date();
+
+    const totalMonthsInYear = 12;
+    const totalDaysInMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0
+    ).getDate();
+    const totalHoursInDay = 24;
+    const totalMinutesInHour = 60;
+    const totalSecondsInMinute = 60;
+
+    const monthsPercent = (elapsedTime.months / totalMonthsInYear) * 100;
+    const daysPercent = (elapsedTime.days / totalDaysInMonth) * 100;
+    const hoursPercent = (elapsedTime.hours / totalHoursInDay) * 100;
+    const minutesPercent = (elapsedTime.minutes / totalMinutesInHour) * 100;
+    const secondsPercent = (elapsedTime.seconds / totalSecondsInMinute) * 100;
+
+    return {
+      monthsPercent,
+      daysPercent,
+      hoursPercent,
+      minutesPercent,
+      secondsPercent,
+    };
+  }
+
+  const [timeElapsed, setTimeLeft] = useState<TimeElapsedType>(
+    dateDifference()
+  );
+  const elapsedPercentages: TimeElapsedPercentageType =
+    calculateElapsedPercentages(timeElapsed);
+
+  useEffect(() => {
     const clockIntervalID = setInterval(
       () => setTimeLeft(dateDifference()),
       1000
@@ -75,10 +101,24 @@ function App() {
 
   return (
     <div className="App">
-      <div></div>
-      <span id="progressbar" style={{ width: `${timeLeft.diffInMsPercent}%` }}>
-        {`${timeLeft.months} months, ${timeLeft.days} days, ${timeLeft.hours} hours, ${timeLeft.minutes} minutes, ${timeLeft.seconds} seconds`}
-      </span>
+      <div
+        id="overallProgressBar"
+        style={{ width: `${timeElapsed.diffInMsPercent}%` }}
+      ></div>
+      <div id="individualProgressHeader">
+        <div>{timeElapsed.months} Months</div>
+        <div>{timeElapsed.days} Days</div>
+        <div>{timeElapsed.hours} Hours</div>
+        <div>{timeElapsed.minutes} Minutes</div>
+        <div>{timeElapsed.seconds} Seconds</div>
+      </div>
+      <div id="individualProgress">
+        <div style={{ height: `${elapsedPercentages.monthsPercent}%` }}></div>
+        <div style={{ height: `${elapsedPercentages.daysPercent}%` }}></div>
+        <div style={{ height: `${elapsedPercentages.hoursPercent}%` }}></div>
+        <div style={{ height: `${elapsedPercentages.minutesPercent}%` }}></div>
+        <div style={{ height: `${elapsedPercentages.secondsPercent}%` }}></div>
+      </div>
     </div>
   );
 }
